@@ -1,0 +1,390 @@
+/* Extends the previous CSS with new styles */
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.875rem;
+}
+
+.save-btn {
+  background: var(--success);
+  color: white;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.save-btn:disabled {
+  background: var(--gray-300);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.export-btn {
+  background: var(--primary);
+  color: white;
+}
+
+.export-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.import-btn {
+  background: var(--info);
+  color: white;
+  cursor: pointer;
+}
+
+.import-btn:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.reset-btn {
+  background: var(--danger);
+  color: white;
+}
+
+.reset-btn:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Phase Breakdown */
+.phase-breakdown {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.breakdown-item {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.breakdown-item.complete {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.breakdown-item.in-progress {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.breakdown-item.not-started {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+/* Sprint Progress Stats */
+.sprint-progress-stats {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sprint-progress-stats .stat {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.sprint-progress-stats .stat.complete {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.sprint-progress-stats .stat.in-progress {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.sprint-progress-stats .stat.not-started {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.progress-fill-complete {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), #34d399);
+  border-radius: var(--radius);
+  transition: width 0.6s ease;
+}
+
+.progress-fill-in-progress {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, var(--warning), #fbbf24);
+  border-radius: var(--radius);
+  transition:
+    width 0.6s ease,
+    left 0.6s ease;
+}
+
+.sprint-percentage {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Tasks List Enhanced */
+.tasks-list {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius);
+  border: 2px solid var(--gray-200);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.task-item:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+}
+
+.task-item.status-complete {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: var(--success);
+}
+
+.task-item.status-in-progress {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: var(--warning);
+}
+
+.task-item.status-not-started {
+  background: white;
+  border-color: var(--gray-200);
+}
+
+.task-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+}
+
+.task-status-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-status-btn:hover {
+  background: var(--gray-100);
+  transform: scale(1.1);
+}
+
+.task-status-btn:active {
+  transform: scale(0.95);
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.task-item.status-complete .task-name {
+  color: var(--success);
+  text-decoration: line-through;
+}
+
+.task-description {
+  font-size: 0.8125rem;
+  color: var(--gray-600);
+  line-height: 1.5;
+}
+
+.task-right {
+  display: flex;
+  align-items: center;
+}
+
+.task-hours {
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  min-width: 50px;
+  text-align: center;
+}
+
+.task-hours.status-complete {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.task-hours.status-in-progress {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.task-hours.status-not-started {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+/* Enhanced Sprint Card */
+.sprint-header {
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+  gap: 1rem;
+}
+
+.sprint-header:hover {
+  background: var(--gray-50);
+}
+
+.sprint-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-width: 250px;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-item {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.action-btn.save-btn:not(:disabled):hover {
+  animation: pulse 2s infinite;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .phase-breakdown {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sprint-right {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .sprint-progress-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .task-item {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .task-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Print Optimizations */
+@media print {
+  .action-buttons {
+    display: none;
+  }
+
+  .task-status-btn {
+    pointer-events: none;
+  }
+
+  .task-item {
+    page-break-inside: avoid;
+  }
+
+  .sprint-card {
+    page-break-inside: avoid;
+  }
+}
