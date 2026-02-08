@@ -1,0 +1,78 @@
+@startuml BIM_IoT_Schedule_Integration
+
+class IFCElement {
+  - id: ElementId
+}
+
+class IoTDevice {
+  - id: DeviceId
+  - linked_bim_element: Option<ElementId>
+}
+
+class Sensor {
+  - id: SensorId
+  - device_id: DeviceId
+}
+
+class SensorReading {
+  - sensor_id: SensorId
+  - value: f64
+}
+
+class ScheduledTask {
+  - task_id: TaskId
+  - linked_elements: Vec<ElementId>
+}
+
+class Schedule {
+  - id: ScheduleId
+}
+
+class Dimension4D {
+  - element_id: ElementId
+  - task_id: Option<TaskId>
+}
+
+class Dimension5D {
+  - element_id: ElementId
+  - total_cost: f64
+}
+
+class Dimension7D {
+  - element_id: ElementId
+  - equipment_data: EquipmentData
+}
+
+class MaintenanceTask {
+  - device_id: DeviceId
+  - scheduled_date: DateTime
+}
+
+IFCElement "1" -- "0..*" IoTDevice : monitored by
+IFCElement "1" -- "0..1" Dimension4D : time
+IFCElement "1" -- "0..1" Dimension5D : cost
+IFCElement "1" -- "0..1" Dimension7D : facility
+IoTDevice "1" -- "0..*" Sensor : has
+Sensor "1" -- "0..*" SensorReading : produces
+ScheduledTask "0..*" -- "0..*" IFCElement : builds
+Schedule "1" *-- "0..*" ScheduledTask : contains
+Dimension4D "0..1" -- "0..1" ScheduledTask : synchronized with
+IoTDevice "1" -- "0..*" MaintenanceTask : requires
+Dimension7D "1" -- "0..*" MaintenanceTask : schedules
+
+note right of IFCElement
+  BIM elements are linked to:
+  - IoT devices for monitoring
+  - Scheduled tasks for 4D
+  - Cost data for 5D
+  - Facility data for 7D
+end note
+
+note bottom of IoTDevice
+  IoT devices monitor
+  construction progress
+  and trigger maintenance
+  tasks automatically
+end note
+
+@enduml
