@@ -3,4 +3,15 @@ name = "construction_vr_platform"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = [
+    "crates/engine",
+    "crates/core",
+    "crates/bim",
+    "crates/collaboration",
+    "crates/api-server",
+    "crates/desktop-client",
+    "crates/vr-client",
+]
+
 [dependencies]
