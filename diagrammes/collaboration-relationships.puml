@@ -1,0 +1,55 @@
+@startuml Collaboration_Relations
+
+class User {
+  - id: UserId
+}
+
+class Project {
+  - id: ProjectId
+}
+
+class Task {
+  - id: TaskId
+}
+
+class Comment {
+  - id: CommentId
+}
+
+class Notification {
+  - id: NotificationId
+}
+
+class Team {
+  - id: TeamId
+  - name: String
+  - members: Vec<UserId>
+}
+
+class ChatRoom {
+  - id: RoomId
+  - project_id: ProjectId
+  - name: String
+  - participants: Vec<UserId>
+  - messages: Vec<Message>
+}
+
+class Message {
+  - id: MessageId
+  - author_id: UserId
+  - content: String
+  - timestamp: DateTime
+  - attachments: Vec<FileId>
+}
+
+User "0..*" -- "0..*" Team : member of
+User "0..*" -- "0..*" Project : works on
+User "1" -- "0..*" Task : assigned to
+User "1" -- "0..*" Comment : writes
+User "1" -- "0..*" Notification : receives
+User "0..*" -- "0..*" ChatRoom : participates in
+ChatRoom "1" *-- "0..*" Message : contains
+Project "1" -- "0..*" ChatRoom : has
+Task "1" -- "0..*" Comment : has
+
+@enduml
