@@ -1,0 +1,100 @@
+@startuml Component_Architecture
+
+package "Client Layer" {
+  [VR Client\n(Unity/Unreal)]
+  [Web Dashboard\n(React)]
+  [Mobile App\n(React Native)]
+  [Desktop App\n(Tauri)]
+}
+
+package "API Gateway" {
+  [REST API\n(Axum)]
+  [GraphQL API\n(async-graphql)]
+  [WebSocket Server\n(tokio-tungstenite)]
+}
+
+package "Core Services" {
+  [User Service]
+  [Project Service]
+  [Task Service]
+  [BIM Service]
+  [VR Service]
+}
+
+package "Supporting Services" {
+  [Notification Service]
+  [Schedule Service]
+  [IoT Service]
+  [Analytics Service]
+  [File Service]
+}
+
+package "Infrastructure" {
+  [Auth Service\n(JWT)]
+  [Email Service\n(SMTP)]
+  [Storage Service\n(S3/Local)]
+  [Cache\n(Redis)]
+  [Message Queue\n(RabbitMQ)]
+}
+
+database "Primary Database" {
+  [PostgreSQL]
+  [Sled (Embedded)]
+}
+
+cloud "External Services" {
+  [MQTT Broker]
+  [Push Service\n(FCM)]
+  [Object Storage\n(S3)]
+}
+
+' Client connections
+[VR Client\n(Unity/Unreal)] --> [WebSocket Server\n(tokio-tungstenite)]
+[Web Dashboard\n(React)] --> [REST API\n(Axum)]
+[Web Dashboard\n(React)] --> [GraphQL API\n(async-graphql)]
+[Mobile App\n(React Native)] --> [REST API\n(Axum)]
+[Desktop App\n(Tauri)] --> [REST API\n(Axum)]
+
+' API Gateway to Services
+[REST API\n(Axum)] --> [User Service]
+[REST API\n(Axum)] --> [Project Service]
+[REST API\n(Axum)] --> [Task Service]
+[REST API\n(Axum)] --> [BIM Service]
+[REST API\n(Axum)] --> [IoT Service]
+[GraphQL API\n(async-graphql)] --> [User Service]
+[GraphQL API\n(async-graphql)] --> [Project Service]
+[WebSocket Server\n(tokio-tungstenite)] --> [VR Service]
+
+' Core Services dependencies
+[User Service] --> [Auth Service\n(JWT)]
+[Project Service] --> [File Service]
+[Task Service] --> [Notification Service]
+[BIM Service] --> [File Service]
+[VR Service] --> [BIM Service]
+
+' Supporting Services
+[Notification Service] --> [Email Service\n(SMTP)]
+[Notification Service] --> [Push Service\n(FCM)]
+[Schedule Service] --> [Task Service]
+[IoT Service] --> [Notification Service]
+[IoT Service] --> [Task Service]
+[Analytics Service] --> [Cache\n(Redis)]
+
+' Infrastructure
+[Auth Service\n(JWT)] --> [Cache\n(Redis)]
+[File Service] --> [Storage Service\n(S3/Local)]
+[IoT Service] --> [MQTT Broker]
+[Email Service\n(SMTP)] --> [Message Queue\n(RabbitMQ)]
+
+' Database connections
+[User Service] --> [PostgreSQL]
+[Project Service] --> [PostgreSQL]
+[Task Service] --> [Sled (Embedded)]
+[BIM Service] --> [PostgreSQL]
+[Schedule Service] --> [Sled (Embedded)]
+[IoT Service] --> [Sled (Embedded)]
+
+' External Services
+[Storage Service\n(S3/Local)] --> [Object Storage\n(S3)]
+
+@enduml
