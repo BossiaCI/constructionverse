@@ -1,0 +1,226 @@
+@startuml Project_Management
+
+class Project <<Aggregate Root>> {
+  - id: ProjectId
+  - company_id: CompanyId
+  - name: String
+  - description: String
+  - code: String
+  - status: ProjectStatus
+  - start_date: DateTime
+  - end_date: Option<DateTime>
+  - budget: Option<f64>
+  - currency: String
+  - location: ProjectLocation
+  - metadata: HashMap<String, String>
+  - owner_id: UserId
+  - team_members: Vec<TeamMember>
+  - created_at: DateTime
+  - updated_at: DateTime
+  - archived: bool
+  --
+  + add_member(user_id: UserId, role: ProjectRole): Result<()>
+  + remove_member(user_id: UserId): Result<()>
+  + update_status(status: ProjectStatus): Result<()>
+  + create_task(request: CreateTaskRequest): Result<Task>
+  + archive(): Result<()>
+  + unarchive(): Result<()>
+  + calculate_completion(): f32
+  + get_statistics(): ProjectStatistics
+  + validate(): Result<()>
+}
+
+enum ProjectStatus {
+  Planning
+  Active
+  OnHold
+  Completed
+  Cancelled
+  --
+  + can_transition_to(new_status: ProjectStatus): bool
+}
+
+class ProjectLocation <<ValueObject>> {
+  - address: String
+  - city: String
+  - state: String
+  - country: String
+  - postal_code: String
+  - latitude: Option<f64>
+  - longitude: Option<f64>
+  --
+  + full_address(): String
+  + coordinates(): Option<(f64, f64)>
+}
+
+class TeamMember <<ValueObject>> {
+  - user_id: UserId
+  - project_role: ProjectRole
+  - joined_at: DateTime
+  - permissions: Vec<Permission>
+  --
+  + can_perform(action: ActionType): bool
+}
+
+enum ProjectRole {
+  ProjectManager
+  LeadArchitect
+  LeadEngineer
+  Architect
+  Engineer
+  Contractor
+  Supervisor
+  Viewer
+  --
+  + permissions(): Vec<Permission>
+}
+
+class Task <<Entity>> {
+  - id: TaskId
+  - project_id: ProjectId
+  - title: String
+  - description: String
+  - status: TaskStatus
+  - priority: TaskPriority
+  - assigned_to: Vec<UserId>
+  - created_by: UserId
+  - watchers: Vec<UserId>
+  - parent_task: Option<TaskId>
+  - subtasks: Vec<TaskId>
+  - tags: Vec<String>
+  - due_date: Option<DateTime>
+  - start_date: Option<DateTime>
+  - completed_at: Option<DateTime>
+  - estimated_hours: Option<f32>
+  - actual_hours: Option<f32>
+  - progress: f32
+  - comments: Vec<Comment>
+  - attachments: Vec<FileId>
+  - dependencies: Vec<TaskDependency>
+  - linked_elements: Vec<ElementId>
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + update_status(status: TaskStatus): Result<()>
+  + assign_to(user_ids: Vec<UserId>): Result<()>
+  + add_watcher(user_id: UserId): Result<()>
+  + remove_watcher(user_id: UserId): Result<()>
+  + add_comment(comment: Comment): Result<()>
+  + update_progress(progress: f32): Result<()>
+  + add_subtask(task: Task): Result<()>
+  + add_dependency(dependency: TaskDependency): Result<()>
+  + is_overdue(): bool
+  + is_blocked(): bool
+  + calculate_total_hours(): f32
+  + validate(): Result<()>
+}
+
+enum TaskStatus {
+  Todo
+  InProgress
+  InReview
+  Blocked
+  Completed
+  Cancelled
+  --
+  + is_terminal(): bool
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+  Urgent
+  --
+  + numeric_value(): u8
+}
+
+class TaskDependency <<ValueObject>> {
+  - predecessor_id: TaskId
+  - dependency_type: DependencyType
+  - lag_days: i64
+  --
+  + is_blocking(): bool
+}
+
+enum DependencyType {
+  FinishToStart
+  StartToStart
+  FinishToFinish
+  StartToFinish
+}
+
+class Comment <<ValueObject>> {
+  - id: CommentId
+  - author_id: UserId
+  - content: String
+  - mentions: Vec<UserId>
+  - created_at: DateTime
+  - edited_at: Option<DateTime>
+  --
+  + mention_users(): Vec<UserId>
+}
+
+class Milestone <<Entity>> {
+  - id: MilestoneId
+  - project_id: ProjectId
+  - name: String
+  - description: String
+  - target_date: DateTime
+  - actual_date: Option<DateTime>
+  - completion_criteria: Vec<String>
+  - associated_tasks: Vec<TaskId>
+  - status: MilestoneStatus
+  - created_at: DateTime
+  --
+  + mark_completed(): Result<()>
+  + is_achieved(): bool
+  + days_until_due(): i64
+}
+
+enum MilestoneStatus {
+  Pending
+  InProgress
+  Achieved
+  Missed
+}
+
+class Sprint <<Entity>> {
+  - id: SprintId
+  - project_id: ProjectId
+  - name: String
+  - goal: String
+  - start_date: DateTime
+  - end_date: DateTime
+  - tasks: Vec<TaskId>
+  - status: SprintStatus
+  - velocity: Option<f32>
+  - created_at: DateTime
+  --
+  + add_task(task_id: TaskId): Result<()>
+  + remove_task(task_id: TaskId): Result<()>
+  + start(): Result<()>
+  + complete(): Result<()>
+  + calculate_velocity(): f32
+  + get_burndown(): Vec<(DateTime, f32)>
+}
+
+enum SprintStatus {
+  Planned
+  Active
+  Completed
+  Cancelled
+}
+
+' Relations
+Project "1" *-- "0..*" Task : contains
+Project "1" *-- "0..*" Milestone : has
+Project "1" *-- "0..*" Sprint : has
+Project "1" -- "0..*" TeamMember : has
+Task "0..*" -- "0..*" User : assigned to
+Task "1" -- "0..*" Comment : has
+Task "0..*" -- "0..*" TaskDependency : depends on
+Sprint "1" -- "0..*" Task : includes
+Milestone "1" -- "0..*" Task : associated with
+
+@enduml

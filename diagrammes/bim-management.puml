@@ -1,0 +1,301 @@
+@startuml BIM_Management
+
+class BIMModel <<Aggregate Root>> {
+  - id: ModelId
+  - project_id: ProjectId
+  - name: String
+  - description: String
+  - ifc_version: String
+  - file_id: FileId
+  - file_size: u64
+  - status: ModelStatus
+  - coordinate_system: CoordinateSystem
+  - site_location: SiteLocation
+  - metadata: IFCMetadata
+  - elements_count: u32
+  - materials_count: u32
+  - properties: HashMap<String, String>
+  - created_at: DateTime
+  - updated_at: DateTime
+  - last_parsed: Option<DateTime>
+  --
+  + parse_ifc(): Result<()>
+  + get_element(element_id: ElementId): Result<IFCElement>
+  + query_elements(filter: ElementFilter): Vec<IFCElement>
+  + detect_clashes(other: BIMModel, tolerance: f64): Vec<Clash>
+  + extract_geometry(): Result<Vec<Geometry>>
+  + get_hierarchy(): ElementTree
+  + update_element_property(element_id: ElementId, property: String, value: String): Result<()>
+  + export_to_format(format: ExportFormat): Result<Vec<u8>>
+  + calculate_quantities(): QuantityTakeoff
+  + validate(): Result<()>
+}
+
+enum ModelStatus {
+  Uploading
+  Processing
+  Ready
+  Error
+  Archived
+}
+
+class CoordinateSystem <<ValueObject>> {
+  - origin: Point3D
+  - x_axis: Vector3D
+  - y_axis: Vector3D
+  - z_axis: Vector3D
+  - unit: LengthUnit
+  --
+  + transform_point(point: Point3D): Point3D
+  + transform_vector(vector: Vector3D): Vector3D
+}
+
+class SiteLocation <<ValueObject>> {
+  - latitude: f64
+  - longitude: f64
+  - elevation: f64
+  - true_north: f64
+  --
+  + coordinates(): (f64, f64, f64)
+}
+
+class IFCElement <<Entity>> {
+  - id: ElementId
+  - model_id: ModelId
+  - global_id: String
+  - ifc_type: IFCType
+  - name: String
+  - description: Option<String>
+  - object_placement: Placement
+  - representation: Representation
+  - properties: HashMap<String, PropertyValue>
+  - property_sets: Vec<PropertySet>
+  - quantity_sets: Vec<QuantitySet>
+  - material_ids: Vec<MaterialId>
+  - parent_element: Option<ElementId>
+  - child_elements: Vec<ElementId>
+  - classification: Option<Classification>
+  - linked_devices: Vec<DeviceId>
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + get_property(name: String): Option<PropertyValue>
+  + set_property(name: String, value: PropertyValue): Result<()>
+  + get_geometry(): Result<Geometry>
+  + calculate_volume(): Result<f64>
+  + calculate_area(): Result<f64>
+  + get_bounding_box(): BoundingBox
+  + is_structural(): bool
+  + get_materials(): Vec<Material>
+  + get_hierarchy(): Vec<IFCElement>
+}
+
+enum IFCType {
+  IfcWall
+  IfcSlab
+  IfcBeam
+  IfcColumn
+  IfcDoor
+  IfcWindow
+  IfcRoof
+  IfcStair
+  IfcRailing
+  IfcSpace
+  IfcBuildingElementProxy
+  Custom(String)
+  --
+  + category(): ElementCategory
+  + is_structural(): bool
+}
+
+class Geometry <<ValueObject>> {
+  - type: GeometryType
+  - vertices: Vec<Point3D>
+  - faces: Vec<Face>
+  - normals: Vec<Vector3D>
+  - uvs: Vec<Point2D>
+  - bounding_box: BoundingBox
+  - transform: Matrix4x4
+  --
+  + calculate_volume(): f64
+  + calculate_surface_area(): f64
+  + to_mesh(): Mesh
+  + apply_transform(transform: Matrix4x4): Geometry
+  + intersects(other: Geometry): bool
+}
+
+enum GeometryType {
+  Mesh
+  BRep
+  CSG
+  Extrusion
+  Sweep
+}
+
+class Material <<Entity>> {
+  - id: MaterialId
+  - model_id: ModelId
+  - name: String
+  - description: Option<String>
+  - category: MaterialCategory
+  - properties: MaterialProperties
+  - appearance: MaterialAppearance
+  - cost_per_unit: Option<f64>
+  - supplier: Option<String>
+  - created_at: DateTime
+  --
+  + calculate_cost(quantity: f64): f64
+  + get_property(name: String): Option<PropertyValue>
+}
+
+class MaterialProperties <<ValueObject>> {
+  - density: Option<f64>
+  - thermal_conductivity: Option<f64>
+  - specific_heat: Option<f64>
+  - acoustic_absorption: Option<f64>
+  - strength: Option<f64>
+  - custom_properties: HashMap<String, PropertyValue>
+  --
+  + get(key: String): Option<PropertyValue>
+}
+
+class MaterialAppearance <<ValueObject>> {
+  - diffuse_color: Color
+  - specular_color: Color
+  - shininess: f32
+  - transparency: f32
+  - texture_map: Option<TextureMap>
+  --
+  + to_pbr(): PBRMaterial
+}
+
+class Clash <<Entity>> {
+  - id: ClashId
+  - model_a_id: ModelId
+  - model_b_id: ModelId
+  - element_a_id: ElementId
+  - element_b_id: ElementId
+  - clash_type: ClashType
+  - severity: ClashSeverity
+  - distance: f64
+  - intersection_volume: Option<f64>
+  - location: Point3D
+  - status: ClashStatus
+  - assigned_to: Option<UserId>
+  - notes: String
+  - detected_at: DateTime
+  - resolved_at: Option<DateTime>
+  --
+  + resolve(): Result<()>
+  + assign_to(user_id: UserId): Result<()>
+  + calculate_clearance(): f64
+}
+
+enum ClashType {
+  Hard
+  Soft
+  Clearance
+  Duplicate
+}
+
+enum ClashSeverity {
+  Critical
+  Major
+  Minor
+  Info
+}
+
+class PropertySet <<ValueObject>> {
+  - name: String
+  - properties: HashMap<String, PropertyValue>
+  --
+  + get(key: String): Option<PropertyValue>
+  + set(key: String, value: PropertyValue): ()
+}
+
+class QuantitySet <<ValueObject>> {
+  - name: String
+  - quantities: HashMap<String, Quantity>
+  --
+  + get_total_volume(): f64
+  + get_total_area(): f64
+  + get_total_length(): f64
+}
+
+class Quantity <<ValueObject>> {
+  - name: String
+  - value: f64
+  - unit: String
+  --
+  + convert_to(unit: String): f64
+}
+
+' Dimension Classes
+class Dimension4D <<Entity>> {
+  - element_id: ElementId
+  - schedule_id: ScheduleId
+  - task_id: Option<TaskId>
+  - planned_start: DateTime
+  - planned_end: DateTime
+  - actual_start: Option<DateTime>
+  - actual_end: Option<DateTime>
+  - status: ConstructionStatus
+  --
+  + calculate_progress(): f32
+  + is_delayed(): bool
+}
+
+class Dimension5D <<Entity>> {
+  - element_id: ElementId
+  - material_cost: f64
+  - labor_cost: f64
+  - equipment_cost: f64
+  - overhead_cost: f64
+  - total_cost: f64
+  - currency: String
+  - cost_breakdown: Vec<CostItem>
+  --
+  + calculate_total(): f64
+  + variance_from_budget(budget: f64): f64
+}
+
+class Dimension6D <<Entity>> {
+  - element_id: ElementId
+  - energy_consumption: EnergyMetrics
+  - carbon_footprint: f64
+  - water_usage: f64
+  - waste_generated: f64
+  - recyclable_content: f32
+  - certifications: Vec<String>
+  --
+  + calculate_leed_points(): u32
+  + calculate_environmental_impact(): f64
+}
+
+class Dimension7D <<Entity>> {
+  - element_id: ElementId
+  - equipment_data: EquipmentData
+  - maintenance_schedule: MaintenanceSchedule
+  - warranty_info: WarrantyInfo
+  - operating_manuals: Vec<FileId>
+  - spare_parts: Vec<SparePart>
+  - service_history: Vec<ServiceRecord>
+  --
+  + schedule_maintenance(): Result<MaintenanceTask>
+  + calculate_lifecycle_cost(): f64
+  + years_until_replacement(): f32
+}
+
+' Relations
+BIMModel "1" *-- "0..*" IFCElement : contains
+IFCElement "1" -- "1" Geometry : has
+IFCElement "0..*" -- "0..*" Material : uses
+IFCElement "1" -- "0..*" PropertySet : has
+IFCElement "1" -- "0..*" QuantitySet : has
+BIMModel "2" -- "0..*" Clash : detects
+IFCElement "1" -- "0..1" Dimension4D : time
+IFCElement "1" -- "0..1" Dimension5D : cost
+IFCElement "1" -- "0..1" Dimension6D : sustainability
+IFCElement "1" -- "0..1" Dimension7D : facility
+
+@enduml
