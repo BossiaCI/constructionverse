@@ -1,0 +1,301 @@
+@startuml VR_Experience
+
+class VRSession <<Aggregate Root>> {
+  - id: SessionId
+  - project_id: ProjectId
+  - host_id: UserId
+  - name: String
+  - description: String
+  - mode: VRMode
+  - max_participants: u32
+  - current_participants: Vec<VRParticipant>
+  - scenes: Vec<SceneId>
+  - active_scene_id: SceneId
+  - start_time: DateTime
+  - end_time: Option<DateTime>
+  - duration_seconds: u64
+  - recording_enabled: bool
+  - recording_file: Option<FileId>
+  - annotations_enabled: bool
+  - voice_chat_enabled: bool
+  - status: SessionStatus
+  - created_at: DateTime
+  --
+  + join(user_id: UserId, device: VRDevice): Result<VRParticipant>
+  + leave(user_id: UserId): Result<()>
+  + switch_scene(scene_id: SceneId): Result<()>
+  + create_annotation(annotation: VRAnnotation): Result<()>
+  + start_recording(): Result<()>
+  + stop_recording(): Result<FileId>
+  + broadcast_event(event: VREvent): Result<()>
+  + end_session(): Result<()>
+}
+
+enum VRMode {
+  SingleUser
+  Collaborative
+  Presentation
+  Training
+  Inspection
+}
+
+enum SessionStatus {
+  Preparing
+  Active
+  Paused
+  Ended
+}
+
+class VRParticipant <<Entity>> {
+  - user_id: UserId
+  - session_id: SessionId
+  - device: VRDevice
+  - avatar: Avatar
+  - position: Vector3D
+  - rotation: Quaternion
+  - view_direction: Vector3D
+  - controller_left: ControllerState
+  - controller_right: ControllerState
+  - voice_enabled: bool
+  - video_enabled: bool
+  - joined_at: DateTime
+  - last_update: DateTime
+  --
+  + update_transform(position: Vector3D, rotation: Quaternion): ()
+  + teleport_to(position: Vector3D): ()
+  + select_object(object_id: ElementId): Result<()>
+  + activate_tool(tool: VRTool): ()
+}
+
+class VRDevice <<ValueObject>> {
+  - device_type: DeviceType
+  - model: String
+  - tracking_type: TrackingType
+  - display_resolution: (u32, u32)
+  - refresh_rate: u32
+  - fov: f32
+  - capabilities: Vec<DeviceCapability>
+  --
+  + supports_6dof(): bool
+  + supports_hand_tracking(): bool
+}
+
+enum DeviceType {
+  MetaQuest2
+  MetaQuest3
+  HTCVive
+  ValveIndex
+  PicoNeo3
+  PSVR2
+  Desktop
+}
+
+class Avatar <<ValueObject>> {
+  - model_id: String
+  - name: String
+  - height: f32
+  - color_scheme: ColorScheme
+  - accessories: Vec<String>
+  --
+  + scale_to_height(height: f32): Transform
+}
+
+class VRScene <<Entity>> {
+  - id: SceneId
+  - project_id: ProjectId
+  - name: String
+  - description: String
+  - bim_model_id: ModelId
+  - environment: Environment
+  - lighting: LightingSetup
+  - camera_settings: CameraSettings
+  - render_quality: RenderQuality
+  - visible_elements: Vec<ElementId>
+  - hidden_elements: Vec<ElementId>
+  - highlighted_elements: Vec<ElementId>
+  - section_planes: Vec<SectionPlane>
+  - annotations: Vec<VRAnnotation>
+  - viewpoints: Vec<Viewpoint>
+  - created_at: DateTime
+  --
+  + load_model(model_id: ModelId): Result<()>
+  + add_annotation(annotation: VRAnnotation): Result<()>
+  + save_viewpoint(name: String, transform: Transform): Result<Viewpoint>
+  + apply_section_plane(plane: SectionPlane): ()
+  + highlight_elements(element_ids: Vec<ElementId>): ()
+  + measure_distance(point_a: Point3D, point_b: Point3D): f64
+}
+
+class Environment <<ValueObject>> {
+  - skybox: SkyboxType
+  - ambient_light: Color
+  - fog_enabled: bool
+  - fog_density: f32
+  - fog_color: Color
+  - ground_plane: GroundPlane
+  --
+  + to_shader_params(): ShaderParams
+}
+
+class LightingSetup <<ValueObject>> {
+  - directional_lights: Vec<DirectionalLight>
+  - point_lights: Vec<PointLight>
+  - spot_lights: Vec<SpotLight>
+  - ambient_intensity: f32
+  - shadows_enabled: bool
+  --
+  + calculate_illumination(point: Point3D): Color
+}
+
+class VRAnnotation <<Entity>> {
+  - id: AnnotationId
+  - scene_id: SceneId
+  - author_id: UserId
+  - position: Point3D
+  - attached_to: Option<ElementId>
+  - type: AnnotationType
+  - title: String
+  - content: String
+  - color: Color
+  - icon: Option<String>
+  - visible: bool
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + update_content(content: String): ()
+  + attach_to_element(element_id: ElementId): ()
+  + set_visibility(visible: bool): ()
+}
+
+enum AnnotationType {
+  Note
+  Issue
+  Measurement
+  Photo
+  Voice
+  Drawing
+}
+
+class VRController <<Entity>> {
+  - session_id: SessionId
+  - user_id: UserId
+  - hand: Hand
+  - position: Vector3D
+  - rotation: Quaternion
+  - velocity: Vector3D
+  - buttons: ButtonState
+  - triggers: TriggerState
+  - joystick: JoystickState
+  - haptics_enabled: bool
+  --
+  + trigger_haptics(intensity: f32, duration: Duration): ()
+  + ray_cast(): Option<HitResult>
+  + grab_object(object_id: ElementId): Result<()>
+  + release_object(): ()
+}
+
+enum Hand {
+  Left
+  Right
+}
+
+class ButtonState <<ValueObject>> {
+  - a_button: bool
+  - b_button: bool
+  - x_button: bool
+  - y_button: bool
+  - menu_button: bool
+  - grip_button: bool
+  --
+  + any_pressed(): bool
+}
+
+class VRTool <<Interface>> {
+  + activate(): ()
+  + deactivate(): ()
+  + update(delta_time: f32): ()
+  + handle_input(input: InputEvent): ()
+}
+
+class MeasurementTool {
+  - start_point: Option<Point3D>
+  - end_point: Option<Point3D>
+  - measurement_type: MeasurementType
+  --
+  + set_start_point(point: Point3D): ()
+  + set_end_point(point: Point3D): ()
+  + calculate_distance(): f64
+  + calculate_area(): f64
+}
+
+class SelectionTool {
+  - selected_elements: Vec<ElementId>
+  - selection_mode: SelectionMode
+  - highlight_color: Color
+  --
+  + select(element_id: ElementId): ()
+  + deselect(element_id: ElementId): ()
+  + clear_selection(): ()
+}
+
+class SectionTool {
+  - section_plane: SectionPlane
+  - visible: bool
+  --
+  + create_section(origin: Point3D, normal: Vector3D): ()
+  + move_section(offset: f32): ()
+  + rotate_section(rotation: Quaternion): ()
+}
+
+class TeleportTool {
+  - target_position: Option<Vector3D>
+  - valid_surfaces: Vec<ElementId>
+  - teleport_arc: Arc
+  --
+  + calculate_trajectory(): Vec<Point3D>
+  + validate_target(): bool
+  + execute_teleport(): ()
+}
+
+class SectionPlane <<ValueObject>> {
+  - origin: Point3D
+  - normal: Vector3D
+  - enabled: bool
+  --
+  + distance_to_point(point: Point3D): f64
+  + is_visible(point: Point3D): bool
+}
+
+class Viewpoint <<Entity>> {
+  - id: ViewpointId
+  - name: String
+  - scene_id: SceneId
+  - position: Vector3D
+  - rotation: Quaternion
+  - fov: f32
+  - visible_elements: Vec<ElementId>
+  - thumbnail: Option<FileId>
+  - created_by: UserId
+  - created_at: DateTime
+  --
+  + apply_to_camera(camera: Camera): ()
+  + generate_thumbnail(): Result<FileId>
+}
+
+' Relations
+VRSession "1" *-- "0..*" VRParticipant : has
+VRSession "1" -- "0..*" VRScene : includes
+VRParticipant "1" -- "1" Avatar : has
+VRParticipant "1" -- "1" VRDevice : uses
+VRParticipant "1" -- "2" VRController : controls
+VRScene "1" *-- "0..*" VRAnnotation : contains
+VRScene "1" *-- "0..*" Viewpoint : has
+VRScene "1" -- "1" Environment : has
+VRScene "1" -- "1" LightingSetup : has
+VRController "1" -- "1" VRTool : uses
+VRTool <|-- MeasurementTool
+VRTool <|-- SelectionTool
+VRTool <|-- SectionTool
+VRTool <|-- TeleportTool
+
+@enduml
