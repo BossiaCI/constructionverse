@@ -1,0 +1,182 @@
+@startuml Identity_Access_Management
+
+skinparam class {
+  BackgroundColor<<Entity>> LightBlue
+  BackgroundColor<<ValueObject>> LightYellow
+  BackgroundColor<<Aggregate>> LightGreen
+}
+
+class User <<Entity>> {
+  - id: UserId
+  - company_id: CompanyId
+  - email: String
+  - password_hash: String
+  - role: UserRole
+  - profile: UserProfile
+  - is_email_verified: bool
+  - email_verification_token: Option<String>
+  - failed_login_attempts: u32
+  - account_locked_until: Option<DateTime>
+  - refresh_tokens: Vec<RefreshToken>
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + authenticate(password: String): Result<Tokens>
+  + verify_email(token: String): Result<()>
+  + reset_password(token: String, new_password: String): Result<()>
+  + lock_account(duration: Duration): Result<()>
+  + unlock_account(): Result<()>
+  + has_permission(permission: Permission): bool
+  + is_locked(): bool
+  + increment_failed_attempts(): Result<()>
+  + reset_failed_attempts(): Result<()>
+}
+
+class UserProfile <<ValueObject>> {
+  - first_name: String
+  - last_name: String
+  - avatar_url: Option<String>
+  - phone: Option<String>
+  - title: Option<String>
+  - bio: Option<String>
+  - timezone: String
+  - language: String
+  --
+  + full_name(): String
+  + validate(): Result<()>
+}
+
+enum UserRole <<ValueObject>> {
+  Admin
+  ProjectManager
+  Architect
+  Engineer
+  Contractor
+  Client
+  Viewer
+  --
+  + permissions(): Vec<Permission>
+  + can_manage_users(): bool
+  + can_edit_project(): bool
+}
+
+class RefreshToken <<ValueObject>> {
+  - token: String
+  - expires_at: DateTime
+  - created_at: DateTime
+  - revoked: bool
+  --
+  + is_valid(): bool
+  + is_expired(): bool
+  + revoke(): ()
+}
+
+class Company <<Entity>> {
+  - id: CompanyId
+  - name: String
+  - legal_name: String
+  - tax_id: Option<String>
+  - address: Address
+  - contact_email: String
+  - contact_phone: String
+  - website: Option<String>
+  - logo_url: Option<String>
+  - subscription: Subscription
+  - settings: CompanySettings
+  - created_at: DateTime
+  - updated_at: DateTime
+  - is_active: bool
+  --
+  + update_subscription(plan: SubscriptionPlan): Result<()>
+  + add_user(user: User): Result<()>
+  + remove_user(user_id: UserId): Result<()>
+  + create_department(name: String, manager_id: UserId): Result<Department>
+  + is_subscription_active(): bool
+  + get_storage_usage(): StorageUsage
+  + validate(): Result<()>
+}
+
+class Subscription <<ValueObject>> {
+  - plan: SubscriptionPlan
+  - status: SubscriptionStatus
+  - start_date: DateTime
+  - end_date: DateTime
+  - max_users: u32
+  - max_projects: u32
+  - max_storage_gb: u32
+  --
+  + is_active(): bool
+  + is_expired(): bool
+  + can_add_user(): bool
+  + can_create_project(): bool
+}
+
+enum SubscriptionPlan <<ValueObject>> {
+  Free
+  Starter
+  Professional
+  Enterprise
+  --
+  + max_users(): u32
+  + max_projects(): u32
+  + storage_limit(): u32
+  + features(): Vec<Feature>
+}
+
+class Department <<Entity>> {
+  - id: DepartmentId
+  - company_id: CompanyId
+  - name: String
+  - description: Option<String>
+  - manager_id: UserId
+  - members: Vec<UserId>
+  - parent_department: Option<DepartmentId>
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + add_member(user_id: UserId): Result<()>
+  + remove_member(user_id: UserId): Result<()>
+  + transfer_manager(new_manager_id: UserId): Result<()>
+  + get_hierarchy(): Vec<Department>
+}
+
+class Permission <<ValueObject>> {
+  - resource: ResourceType
+  - action: ActionType
+  - scope: PermissionScope
+  --
+  + matches(resource: ResourceType, action: ActionType): bool
+}
+
+enum ResourceType {
+  Project
+  Task
+  BIMModel
+  User
+  Company
+  IoTDevice
+  Schedule
+  Report
+}
+
+enum ActionType {
+  Create
+  Read
+  Update
+  Delete
+  Execute
+  Share
+}
+
+' Relations
+User "1" -- "1" UserProfile : has
+User "0..*" -- "1" Company : belongs to
+User "1" -- "0..*" RefreshToken : has
+User "1" -- "1" UserRole : assigned
+UserRole "1" -- "0..*" Permission : grants
+Company "1" *-- "0..*" Department : contains
+Company "1" -- "1" Subscription : has
+Department "1" -- "0..*" User : has members
+Department "1" -- "1" User : managed by
+
+@enduml
