@@ -1,0 +1,358 @@
+@startuml IoT_Management
+
+class IoTDevice <<Aggregate Root>> {
+  - id: DeviceId
+  - name: String
+  - device_type: DeviceType
+  - manufacturer: String
+  - model: String
+  - serial_number: String
+  - firmware_version: String
+  - project_id: ProjectId
+  - location: DeviceLocation
+  - linked_bim_element: Option<ElementId>
+  - gateway_id: Option<GatewayId>
+  - connection_status: ConnectionStatus
+  - last_seen: Option<DateTime>
+  - ip_address: Option<String>
+  - mac_address: Option<String>
+  - sensors: Vec<SensorId>
+  - config: DeviceConfig
+  - metadata: HashMap<String, String>
+  - installed_at: DateTime
+  - last_maintenance: Option<DateTime>
+  - next_maintenance: Option<DateTime>
+  - warranty_expires: Option<DateTime>
+  - created_at: DateTime
+  - updated_at: DateTime
+  - is_active: bool
+  --
+  + update_status(status: ConnectionStatus): ()
+  + heartbeat(): ()
+  + add_sensor(sensor: Sensor): Result<()>
+  + needs_maintenance(): bool
+  + is_warranty_valid(): bool
+  + validate(): Result<()>
+}
+
+enum DeviceType {
+  TemperatureSensor
+  HumiditySensor
+  AirQualitySensor
+  VibrationSensor
+  StrainGauge
+  TiltSensor
+  PowerMeter
+  WaterMeter
+  MotionDetector
+  Camera
+  SmokeDetector
+  GasDetector
+  CraneMonitor
+  ExcavatorTracker
+  ConcreteTemperatureProbe
+  SmartValve
+  SmartSwitch
+  Custom(String)
+  --
+  + category(): DeviceCategory
+  + typical_lifespan(): f32
+}
+
+enum ConnectionStatus {
+  Online
+  Offline
+  Maintenance
+  Error(String)
+  LowBattery(f32)
+}
+
+class DeviceLocation <<ValueObject>> {
+  - latitude: Option<f64>
+  - longitude: Option<f64>
+  - altitude: Option<f64>
+  - floor_level: Option<i32>
+  - zone: Option<String>
+  - coordinates_3d: Option<[f32; 3]>
+  --
+  + distance_to(other: DeviceLocation): f64
+  + in_zone(zone_name: String): bool
+}
+
+class DeviceConfig <<ValueObject>> {
+  - sampling_interval_seconds: u32
+  - reporting_interval_seconds: u32
+  - battery_level_threshold: f32
+  - alert_thresholds: HashMap<String, AlertThreshold>
+  - custom_settings: HashMap<String, serde_json::Value>
+  --
+  + validate(): Result<()>
+  + apply_default(): ()
+}
+
+class AlertThreshold <<ValueObject>> {
+  - min: Option<f64>
+  - max: Option<f64>
+  - critical_min: Option<f64>
+  - critical_max: Option<f64>
+  --
+  + is_violated(value: f64): Option<AlertSeverity>
+}
+
+class Sensor <<Entity>> {
+  - id: SensorId
+  - device_id: DeviceId
+  - sensor_type: SensorType
+  - unit: MeasurementUnit
+  - accuracy: Option<f64>
+  - range_min: Option<f64>
+  - range_max: Option<f64>
+  - calibrated_at: Option<DateTime>
+  - calibration_due: Option<DateTime>
+  --
+  + needs_calibration(): bool
+  + validate_reading(value: f64): Result<()>
+}
+
+enum SensorType {
+  Temperature
+  Humidity
+  Pressure
+  AirQuality(String)
+  Light(LightSpectrum)
+  Sound(String)
+  Vibration(Axis)
+  Strain
+  Tilt(Axis)
+  Crack(String)
+  Power(Option<u8>)
+  Flow(String)
+  Level
+  Motion
+  Proximity
+  Custom(String)
+}
+
+enum MeasurementUnit {
+  Celsius
+  Fahrenheit
+  Percent
+  Pascal
+  PPM
+  Lux
+  Decibel
+  Hertz
+  Volt
+  Ampere
+  Watt
+  KilowattHour
+  Meter
+  Millimeter
+  Degree
+  G
+  Custom(String)
+}
+
+class SensorReading <<Entity>> {
+  - id: ReadingId
+  - sensor_id: SensorId
+  - device_id: DeviceId
+  - timestamp: DateTime
+  - value: f64
+  - unit: MeasurementUnit
+  - quality: DataQuality
+  - metadata: HashMap<String, String>
+  --
+  + validate(): Result<()>
+  + is_anomaly(statistics: SensorStatistics): bool
+}
+
+enum DataQuality {
+  Good
+  Fair
+  Poor
+  Invalid
+  OutOfRange
+  CalibrationNeeded
+}
+
+class SensorStatistics <<ValueObject>> {
+  - count: usize
+  - min: f64
+  - max: f64
+  - avg: f64
+  - std_dev: f64
+  - first_reading: DateTime
+  - last_reading: DateTime
+  --
+  + calculate_z_score(value: f64): f64
+}
+
+class Gateway <<Entity>> {
+  - id: GatewayId
+  - name: String
+  - gateway_type: GatewayType
+  - project_id: ProjectId
+  - location: DeviceLocation
+  - connected_devices: Vec<DeviceId>
+  - status: ConnectionStatus
+  - network_config: NetworkConfig
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + add_device(device_id: DeviceId): Result<()>
+  + remove_device(device_id: DeviceId): Result<()>
+  + get_signal_strength(device_id: DeviceId): Option<f32>
+}
+
+enum GatewayType {
+  LoRaWAN
+  WiFi
+  Bluetooth
+  Zigbee
+  Cellular4G
+  Cellular5G
+  Ethernet
+  Hybrid
+}
+
+class NetworkConfig <<ValueObject>> {
+  - ssid: Option<String>
+  - ip_address: String
+  - subnet_mask: String
+  - gateway: String
+  - dns: Vec<String>
+  - port: u16
+  --
+  + validate(): Result<()>
+}
+
+class IoTAlert <<Entity>> {
+  - id: AlertId
+  - device_id: DeviceId
+  - sensor_id: Option<SensorId>
+  - alert_type: AlertType
+  - severity: AlertSeverity
+  - title: String
+  - description: String
+  - triggered_at: DateTime
+  - resolved_at: Option<DateTime>
+  - acknowledged_by: Option<UserId>
+  - acknowledged_at: Option<DateTime>
+  - actions_taken: Vec<String>
+  --
+  + acknowledge(user_id: UserId): ()
+  + resolve(action: String): ()
+  + is_active(): bool
+}
+
+enum AlertType {
+  ThresholdExceeded(f64, f64)
+  DeviceOffline(u32)
+  LowBattery(f32)
+  MaintenanceDue
+  CalibrationDue
+  DataQualityIssue
+  AnomalyDetected
+  Custom(String)
+}
+
+enum AlertSeverity {
+  Info
+  Warning
+  Critical
+  Emergency
+}
+
+class AutomationRule <<Entity>> {
+  - id: RuleId
+  - name: String
+  - description: String
+  - enabled: bool
+  - trigger: RuleTrigger
+  - conditions: Vec<RuleCondition>
+  - actions: Vec<RuleAction>
+  - created_by: UserId
+  - created_at: DateTime
+  - last_triggered: Option<DateTime>
+  - trigger_count: u64
+  --
+  + evaluate(context: RuleContext): bool
+  + execute(): Result<Vec<ActionResult>>
+  + enable(): ()
+  + disable(): ()
+}
+
+enum RuleTrigger {
+  SensorReading(SensorId)
+  DeviceStatus(DeviceId)
+  Alert(Option<AlertSeverity>)
+  Schedule(String)
+  Manual
+}
+
+enum RuleCondition {
+  ValueGreaterThan(f64)
+  ValueLessThan(f64)
+  ValueEquals(f64)
+  ValueInRange(f64, f64)
+  DeviceOffline(u32)
+  TimeOfDay(u8, u8)
+  DayOfWeek(Vec<Weekday>)
+  And(Vec<RuleCondition>)
+  Or(Vec<RuleCondition>)
+  Not(Box<RuleCondition>)
+}
+
+enum RuleAction {
+  SendNotification(Vec<UserId>, String)
+  CreateTask(CreateTaskRequest)
+  ControlDevice(DeviceId, String)
+  LogEvent(String)
+  TriggerWebhook(String, serde_json::Value)
+  UpdateDeviceConfig(DeviceId, HashMap<String, serde_json::Value>)
+  TriggerAlert(AlertSeverity, String)
+}
+
+class DeviceAnalytics <<ValueObject>> {
+  - device_id: DeviceId
+  - period_start: DateTime
+  - period_end: DateTime
+  - uptime_percentage: f32
+  - total_readings: usize
+  - average_value: Option<f64>
+  - min_value: Option<f64>
+  - max_value: Option<f64>
+  - alerts_triggered: usize
+  - data_quality_score: f32
+  --
+  + generate_report(): Report
+}
+
+class ProjectIoTSummary <<ValueObject>> {
+  - project_id: ProjectId
+  - total_devices: usize
+  - online_devices: usize
+  - offline_devices: usize
+  - devices_needing_maintenance: usize
+  - active_alerts: usize
+  - total_readings_today: usize
+  - device_breakdown: HashMap<DeviceType, usize>
+  - connectivity_breakdown: HashMap<String, usize>
+  - last_updated: DateTime
+  --
+  + to_dashboard(): Dashboard
+}
+
+' Relations
+IoTDevice "1" *-- "0..*" Sensor : has
+IoTDevice "0..*" -- "1" Gateway : connected via
+IoTDevice "1" -- "0..1" IFCElement : linked to
+Sensor "1" -- "0..*" SensorReading : produces
+Sensor "1" -- "0..*" IoTAlert : triggers
+IoTDevice "1" -- "0..*" IoTAlert : generates
+IoTAlert "1" -- "0..*" Task : creates
+AutomationRule "1" -- "0..*" IoTAlert : processes
+AutomationRule "1" -- "0..*" Task : creates
+
+@enduml
