@@ -1,0 +1,136 @@
+@startuml Construction_VR_Platform_Domain_Model
+
+!define DOMAIN_COLOR #E3F2FD
+!define SUBDOMAIN_COLOR #FFF3E0
+!define AGGREGATE_COLOR #F1F8E9
+
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package "Construction VR Platform" as Platform {
+
+  package "Core Domain" <<DOMAIN_COLOR>> {
+    package "Identity & Access" <<SUBDOMAIN_COLOR>> {
+      class User
+      class Company
+      class Role
+      class Permission
+    }
+
+    package "Project Management" <<SUBDOMAIN_COLOR>> {
+      class Project
+      class Task
+      class Sprint
+      class Milestone
+    }
+
+    package "BIM Management" <<SUBDOMAIN_COLOR>> {
+      class BIMModel
+      class IFCElement
+      class Geometry
+      class Material
+    }
+
+    package "VR Experience" <<SUBDOMAIN_COLOR>> {
+      class VRSession
+      class VRScene
+      class VRController
+      class VRAnnotation
+    }
+  }
+
+  package "Supporting Domain" <<DOMAIN_COLOR>> {
+    package "Collaboration" <<SUBDOMAIN_COLOR>> {
+      class Team
+      class Department
+      class ChatRoom
+      class Comment
+    }
+
+    package "Scheduling" <<SUBDOMAIN_COLOR>> {
+      class Schedule
+      class ScheduledTask
+      class Resource
+      class Dependency
+    }
+
+    package "Notifications" <<SUBDOMAIN_COLOR>> {
+      class Notification
+      class NotificationPreference
+      class EmailTemplate
+      class PushSubscription
+    }
+
+    package "IoT Management" <<SUBDOMAIN_COLOR>> {
+      class IoTDevice
+      class Sensor
+      class Gateway
+      class Alert
+      class AutomationRule
+    }
+  }
+
+  package "Generic Domain" <<DOMAIN_COLOR>> {
+    package "Storage" <<SUBDOMAIN_COLOR>> {
+      class File
+      class FileVersion
+      class Storage
+    }
+
+    package "Analytics" <<SUBDOMAIN_COLOR>> {
+      class Metric
+      class Report
+      class Dashboard
+      class DataPoint
+    }
+
+    package "Audit" <<SUBDOMAIN_COLOR>> {
+      class AuditLog
+      class EventLog
+      class ChangeHistory
+    }
+  }
+}
+
+' Core Domain Relations
+User "1" -- "0..*" Project : manages
+User "1" -- "1" Company : belongs to
+Company "1" *-- "0..*" Department : contains
+Department "1" *-- "0..*" User : has members
+Project "1" *-- "0..*" Task : contains
+Project "1" -- "0..*" BIMModel : has
+Project "1" -- "0..*" VRSession : hosts
+Project "1" -- "1" Schedule : has
+Task "0..*" -- "0..*" User : assigned to
+
+' Supporting Domain Relations
+Project "1" -- "0..*" IoTDevice : monitors
+IoTDevice "1" -- "0..*" Sensor : has
+IoTDevice "0..*" -- "1" Gateway : connected via
+Sensor "1" -- "0..*" Alert : triggers
+Alert "1" -- "0..*" Task : creates
+Alert "1" -- "0..*" Notification : sends
+
+' BIM Relations
+BIMModel "1" *-- "0..*" IFCElement : contains
+IFCElement "1" -- "1" Geometry : has
+IFCElement "0..*" -- "0..*" Material : uses
+IFCElement "0..*" -- "0..*" IoTDevice : linked to
+
+' VR Relations
+VRSession "1" *-- "0..*" VRScene : has
+VRScene "1" -- "1" BIMModel : renders
+VRSession "0..*" -- "0..*" User :   participants
+VRScene "1" -- "0..*" VRAnnotation : contains
+
+' Scheduling Relations
+Schedule "1" *-- "0..*" ScheduledTask : contains
+ScheduledTask "0..*" -- "0..*" Resource : requires
+ScheduledTask "0..*" -- "0..*" Dependency : has
+
+' Analytics Relations
+Project "1" -- "0..*" Report : generates
+Report "1" *-- "0..*" Metric : contains
+Metric "1" -- "0..*" DataPoint : measured by
+
+@enduml
