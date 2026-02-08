@@ -1,0 +1,244 @@
+@startuml Scheduling
+
+class Schedule <<Aggregate Root>> {
+  - id: ScheduleId
+  - project_id: ProjectId
+  - name: String
+  - description: String
+  - start_date: DateTime
+  - end_date: DateTime
+  - calendar: WorkCalendar
+  - tasks: Vec<ScheduledTask>
+  - milestones: Vec<ScheduleMilestone>
+  - resources: Vec<Resource>
+  - baselines: Vec<ScheduleBaseline>
+  - critical_path: Vec<TaskId>
+  - total_float: i64
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + add_task(task: ScheduledTask): Result<()>
+  + remove_task(task_id: TaskId): Result<()>
+  + calculate_critical_path(): Vec<TaskId>
+  + forward_pass(): Result<()>
+  + backward_pass(): Result<()>
+  + level_resources(): Result<()>
+  + create_baseline(name: String): Result<ScheduleBaseline>
+  + compare_to_baseline(baseline_id: Uuid): ScheduleComparison
+  + calculate_earned_value(): EarnedValueMetrics
+  + get_gantt_data(): GanttData
+  + simulate_scenario(changes: Vec<TaskChange>): SimulationResult
+}
+
+class ScheduledTask <<Entity>> {
+  - task_id: TaskId
+  - name: String
+  - duration_days: i64
+  - earliest_start: DateTime
+  - earliest_finish: DateTime
+  - latest_start: DateTime
+  - latest_finish: DateTime
+  - actual_start: Option<DateTime>
+  - actual_finish: Option<DateTime>
+  - baseline_start: Option<DateTime>
+  - baseline_finish: Option<DateTime>
+  - float_days: i64
+  - free_float_days: i64
+  - is_critical: bool
+  - dependencies: Vec<TaskDependency>
+  - constraints: Vec<TaskConstraint>
+  - resource_assignments: Vec<ResourceAssignment>
+  - progress_percent: f32
+  - cost: f64
+  --
+  + calculate_float(): i64
+  + is_overdue(): bool
+  + schedule_variance_days(): Option<i64>
+  + validate(): Result<()>
+}
+
+enum TaskConstraint {
+  MustStartOn(DateTime)
+  MustFinishOn(DateTime)
+  StartNoEarlierThan(DateTime)
+  StartNoLaterThan(DateTime)
+  FinishNoEarlierThan(DateTime)
+  FinishNoLaterThan(DateTime)
+}
+
+class TaskDependency <<ValueObject>> {
+  - predecessor_id: TaskId
+  - dependency_type: DependencyType
+  - lag_days: i64
+  --
+  + calculate_successor_start(predecessor_finish: DateTime): DateTime
+}
+
+class Resource <<Entity>> {
+  - id: ResourceId
+  - name: String
+  - resource_type: ResourceType
+  - availability: f32
+  - cost_per_hour: f64
+  - max_units: f32
+  - calendar: WorkCalendar
+  - skills: Vec<String>
+  - assigned_tasks: Vec<TaskId>
+  --
+  + is_available(date: DateTime, units: f32): bool
+  + calculate_utilization(start: DateTime, end: DateTime): f32
+  + get_conflicts(): Vec<ResourceConflict>
+}
+
+enum ResourceType {
+  Human(HumanResource)
+  Equipment(EquipmentResource)
+  Material(MaterialResource)
+  Cost(CostResource)
+}
+
+class HumanResource <<ValueObject>> {
+  - role: String
+  - certifications: Vec<String>
+  - hourly_rate: f64
+  --
+  + can_perform_task(task_type: String): bool
+}
+
+class EquipmentResource <<ValueObject>> {
+  - equipment_type: String
+  - model: String
+  - hourly_rate: f64
+  - maintenance_schedule: Vec<DateTime>
+  --
+  + is_operational(date: DateTime): bool
+}
+
+class ResourceAssignment <<ValueObject>> {
+  - resource_id: ResourceId
+  - units: f32
+  - start_date: DateTime
+  - end_date: DateTime
+  - cost: f64
+  --
+  + calculate_cost(hourly_rate: f64): f64
+  + duration(): Duration
+}
+
+class ResourceConflict <<ValueObject>> {
+  - resource_id: ResourceId
+  - task_a_id: TaskId
+  - task_b_id: TaskId
+  - conflict_start: DateTime
+  - conflict_end: DateTime
+  - required_units: f32
+  - available_units: f32
+  --
+  + severity(): ConflictSeverity
+  + suggest_resolution(): Vec<ResolutionOption>
+}
+
+class WorkCalendar <<ValueObject>> {
+  - name: String
+  - working_days: Vec<Weekday>
+  - working_hours_per_day: f32
+  - holidays: Vec<Holiday>
+  - special_work_days: Vec<SpecialWorkDay>
+  - exceptions: Vec<CalendarException>
+  --
+  + is_working_day(date: DateTime): bool
+  + add_working_days(start: DateTime, days: i64): DateTime
+  + calculate_working_hours(start: DateTime, end: DateTime): f32
+}
+
+class Holiday <<ValueObject>> {
+  - name: String
+  - date: DateTime
+  - recurring: bool
+  --
+  + applies_to(date: DateTime): bool
+}
+
+class ScheduleBaseline <<Entity>> {
+  - id: Uuid
+  - schedule_id: ScheduleId
+  - name: String
+  - created_at: DateTime
+  - tasks_snapshot: Vec<ScheduledTask>
+  - total_duration_days: i64
+  - total_cost: f64
+  --
+  + compare_to_current(current: Schedule): ScheduleComparison
+}
+
+class ScheduleComparison <<ValueObject>> {
+  - baseline_id: Uuid
+  - current_duration: i64
+  - baseline_duration: i64
+  - duration_variance_days: i64
+  - duration_variance_percent: f32
+  - current_cost: f64
+  - baseline_cost: f64
+  - cost_variance: f64
+  - cost_variance_percent: f32
+  - tasks_delayed: usize
+  - tasks_on_track: usize
+  - critical_path_changed: bool
+  --
+  + generate_report(): Report
+}
+
+class EarnedValueMetrics <<ValueObject>> {
+  - planned_value: f64
+  - earned_value: f64
+  - actual_cost: f64
+  - schedule_variance: f64
+  - cost_variance: f64
+  - schedule_performance_index: f64
+  - cost_performance_index: f64
+  - estimate_at_completion: f64
+  - estimate_to_complete: f64
+  - variance_at_completion: f64
+  --
+  + is_on_schedule(): bool
+  + is_on_budget(): bool
+  + forecast_completion(): DateTime
+}
+
+class ScheduleMilestone <<Entity>> {
+  - id: MilestoneId
+  - schedule_id: ScheduleId
+  - name: String
+  - target_date: DateTime
+  - actual_date: Option<DateTime>
+  - associated_tasks: Vec<TaskId>
+  - critical: bool
+  --
+  + is_achieved(): bool
+  + days_until_due(): i64
+  + mark_completed(date: DateTime): ()
+}
+
+class GanttData <<ValueObject>> {
+  - tasks: Vec<GanttTask>
+  - dependencies: Vec<GanttDependency>
+  - milestones: Vec<GanttMilestone>
+  - resources: Vec<GanttResource>
+  - start_date: DateTime
+  - end_date: DateTime
+  --
+  + to_json(): String
+  + to_csv(): String
+}
+
+' Relations
+Schedule "1" *-- "0..*" ScheduledTask : contains
+Schedule "1" *-- "0..*" Resource : manages
+Schedule "1" *-- "0..*" ScheduleMilestone : has
+Schedule "1" *-- "0..*" ScheduleBaseline : has
+ScheduledTask "0..*" -- "0..*" TaskDependency : depends on
+ScheduledTask "0..*" -- "0..*" ResourceAssignment : requires
+Resource "1" -- "0..*" ResourceConflict : has
+Schedule "1" -- "1" WorkCalendar : uses
+
+@enduml
