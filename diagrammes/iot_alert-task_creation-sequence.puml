@@ -1,0 +1,76 @@
+@startuml IoT_Alert_Task_Creation_Sequence
+
+actor "Safety Manager" as SM
+participant "IoT Device" as Device
+participant "Sensor Manager" as SensorMgr
+participant "Alert Manager" as AlertMgr
+participant "Automation Engine" as Auto
+participant "Task Manager" as TaskMgr
+participant "Notification Manager" as NotifMgr
+database "Database" as DB
+
+== Normal Operation ==
+Device -> SensorMgr: Send Reading\n(vibration: 0.5g)
+activate SensorMgr
+SensorMgr -> DB: Store Reading
+SensorMgr --> Device: ACK
+deactivate SensorMgr
+
+== Critical Reading Detected ==
+Device -> SensorMgr: Send Reading\n(vibration: 8.5g ⚠️)
+activate SensorMgr
+SensorMgr -> DB: Store Reading
+SensorMgr -> AlertMgr: Check Thresholds
+activate AlertMgr
+
+AlertMgr -> AlertMgr: Evaluate:\nvalue > threshold?
+AlertMgr -> DB: Create Alert\n(severity: Critical)
+AlertMgr --> SensorMgr: Alert Created
+deactivate AlertMgr
+deactivate SensorMgr
+
+== Automation Triggered ==
+AlertMgr -> Auto: Trigger Rules
+activate Auto
+Auto -> DB: Get Matching Rules
+Auto -> Auto: Evaluate Conditions
+
+alt Conditions Met
+  Auto -> TaskMgr: Create Maintenance Task
+  activate TaskMgr
+  TaskMgr -> DB: Create Task\n(Priority: High\nDue: 24h)
+  TaskMgr --> Auto: Task Created
+  deactivate TaskMgr
+  
+  Auto -> NotifMgr: Send Notifications
+  activate NotifMgr
+  NotifMgr -> DB: Create Notifications
+  NotifMgr -> NotifMgr: Send Email
+  NotifMgr -> NotifMgr: Send Push
+  NotifMgr --> SM: Email: "Critical Alert"
+  NotifMgr --> SM: Push Notification
+  deactivate NotifMgr
+end
+
+Auto -> DB: Log Execution
+Auto --> AlertMgr: Automation Complete
+deactivate Auto
+
+== Manager Response ==
+SM -> TaskMgr: View Task Details
+activate TaskMgr
+TaskMgr -> DB: Get Task
+TaskMgr --> SM: Task Info\n+ Device Details\n+ Reading History
+deactivate TaskMgr
+
+SM -> TaskMgr: Assign to Technician
+activate TaskMgr
+TaskMgr -> DB: Update Task
+TaskMgr -> NotifMgr: Notify Technician
+activate NotifMgr
+NotifMgr --> "Technician": Task Assigned
+deactivate NotifMgr
+TaskMgr --> SM: Assigned
+deactivate TaskMgr
+
+@enduml
