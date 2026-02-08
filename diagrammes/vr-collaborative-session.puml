@@ -1,0 +1,98 @@
+@startuml VR_Collaborative_Session
+
+actor "Architect" as A
+actor "Engineer" as E
+participant "VR Server" as VR
+participant "Session Manager" as SM
+participant "BIM Manager" as BIM
+participant "Annotation Manager" as AM
+database "Database" as DB
+
+== Session Creation ==
+A -> VR: Create VR Session\n(project_id, mode: Collaborative)
+activate VR
+VR -> SM: Create Session
+activate SM
+SM -> DB: Store Session
+SM -> BIM: Load BIM Model
+activate BIM
+BIM -> DB: Get Model Data
+BIM -> BIM: Parse IFC
+BIM --> SM: Model Ready
+deactivate BIM
+SM --> VR: Session Created\n(session_id, token)
+deactivate SM
+VR --> A: Join URL + Token
+deactivate VR
+
+== Participants Join ==
+A -> VR: Join Session(token)
+activate VR
+VR -> SM: Add Participant(A)
+activate SM
+SM -> DB: Store Participant
+SM -> SM: Create Avatar
+SM --> VR: Participant Added
+deactivate SM
+VR --> A: Session State\n(participants, scene)
+deactivate VR
+
+E -> VR: Join Session(token)
+activate VR
+VR -> SM: Add Participant(E)
+activate SM
+SM -> DB: Store Participant
+SM --> VR: Participant Added
+SM -> VR: Broadcast: New Participant
+deactivate SM
+VR --> E: Session State
+VR --> A: Engineer Joined
+deactivate VR
+
+== Collaboration ==
+A -> VR: Create Annotation\n(position, content)
+activate VR
+VR -> AM: Create Annotation
+activate AM
+AM -> DB: Store Annotation
+AM --> VR: Annotation Created
+deactivate AM
+VR -> VR: Broadcast to All
+VR --> E: New Annotation
+VR --> A: Annotation Confirmed
+deactivate VR
+
+E -> VR: Select Element(wall_id)
+activate VR
+VR -> BIM: Get Element Details
+activate BIM
+BIM -> DB: Query Element
+BIM --> VR: Element Data\n(properties, geometry)
+deactivate BIM
+VR -> VR: Highlight Element
+VR --> A: Element Highlighted
+VR --> E: Element Selected
+deactivate VR
+
+E -> VR: Measure Distance\n(point_a, point_b)
+activate VR
+VR -> VR: Calculate Distance
+VR --> E: Distance: 5.2m
+VR --> A: Measurement Added
+deactivate VR
+
+== Session End ==
+A -> VR: End Session
+activate VR
+VR -> SM: End Session
+activate SM
+SM -> DB: Update Session\n(status: Ended)
+SM -> SM: Save Recordings
+SM -> SM: Save Annotations
+SM --> VR: Session Ended
+deactivate SM
+VR --> A: Session Summary
+VR --> E: Session Ended
+deactivate VR
+
+@enduml

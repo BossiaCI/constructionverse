@@ -1,0 +1,277 @@
+@startuml System_Architecture
+
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+
+package "Presentation Layer" {
+  RECTANGLE "VR Headsets" as VR_HW {
+    Meta Quest 3
+    Valve Index
+    HTC Vive
+  }
+  
+  RECTANGLE "Web Browsers" as Web {
+    Chrome
+    Firefox
+    Safari
+  }
+  
+  RECTANGLE "Mobile Devices" as Mobile {
+    iOS
+    Android
+  }
+}
+
+package "Application Layer" {
+  RECTANGLE "VR Application" as VR_APP {
+    Unity/Unreal Engine
+    WebXR
+    3D Rendering
+    Physics Engine
+    Audio Engine
+  }
+  
+  RECTANGLE "Web Application" as WEB_APP {
+    React
+    Redux
+    Three.js
+    WebGL
+  }
+  
+  RECTANGLE "Mobile Application" as MOBILE_APP {
+    React Native
+    Expo
+  }
+}
+
+package "API Layer" {
+  RECTANGLE "API Gateway" as GATEWAY {
+    Load Balancer
+    Rate Limiter
+    Request Router
+    Auth Middleware
+  }
+  
+  RECTANGLE "REST API" as REST {
+    Axum Framework
+    JSON/Protobuf
+    OpenAPI Spec
+  }
+  
+  RECTANGLE "GraphQL API" as GQL {
+    async-graphql
+    DataLoader
+    Subscriptions
+  }
+  
+  RECTANGLE "WebSocket Server" as WS {
+    Real-time Events
+    Binary Protocol
+    Pub/Sub
+  }
+}
+
+package "Service Layer" {
+  RECTANGLE "Identity & Access" as IAM {
+    User Management
+    Authentication
+    Authorization
+    RBAC
+  }
+  
+  RECTANGLE "Project Management" as PM {
+    Projects
+    Tasks
+    Teams
+    Milestones
+  }
+  
+  RECTANGLE "BIM Engine" as BIM {
+    IFC Parser
+    Geometry Processing
+    Clash Detection
+    Material Management
+    4D/5D/6D/7D
+  }
+  
+  RECTANGLE "VR Engine" as VR_ENG {
+    Session Management
+    Scene Rendering
+    Collaboration
+    Annotations
+    Measurements
+  }
+  
+  RECTANGLE "Scheduler" as SCHED {
+    CPM Algorithm
+    Resource Leveling
+    EVM Calculation
+    Gantt Generation
+  }
+  
+  RECTANGLE "IoT Manager" as IOT {
+    Device Registry
+    Data Ingestion
+    Alert Engine
+    Automation
+    Analytics
+  }
+  
+  RECTANGLE "Notification Engine" as NOTIF {
+    Email (SMTP)
+    Push (FCM/WebPush)
+    In-App
+    Digest
+  }
+  
+  RECTANGLE "Analytics Engine" as ANALYTICS {
+    Metrics Collection
+    Report Generation
+    Predictive Models
+    Dashboards
+  }
+}
+
+package "Data Layer" {
+  database "PostgreSQL" as PG {
+    Users
+    Companies
+    Projects
+    BIM Models
+  }
+  
+  database "Sled (Embedded)" as SLED {
+    Tasks
+    Schedule
+    IoT Data
+    Cache
+  }
+  
+  database "Redis" as REDIS {
+    Session Cache
+    API Cache
+    Real-time Data
+  }
+  
+  database "S3/Object Storage" as S3 {
+    BIM Files (IFC)
+    3D Models
+    Textures
+    Recordings
+    Documents
+  }
+  
+  database "TimescaleDB" as TSDB {
+    Sensor Readings
+    Time-series Data
+    Metrics
+  }
+}
+
+package "External Services" {
+  cloud "MQTT Broker" as MQTT {
+    Device Messages
+    LoRaWAN
+  }
+  
+  cloud "Email Service" as EMAIL {
+    SendGrid
+    AWS SES
+  }
+  
+  cloud "Push Service" as PUSH {
+    Firebase (FCM)
+    Apple Push (APNs)
+  }
+  
+  cloud "Storage" as STORAGE {
+    AWS S3
+    Azure Blob
+    MinIO
+  }
+}
+
+' Connections - Presentation to Application
+VR_HW --> VR_APP
+Web --> WEB_APP
+Mobile --> MOBILE_APP
+
+' Connections - Application to API
+VR_APP --> WS
+VR_APP --> REST
+WEB_APP --> REST
+WEB_APP --> GQL
+MOBILE_APP --> REST
+
+' Connections - API Layer
+GATEWAY --> REST
+GATEWAY --> GQL
+GATEWAY --> WS
+
+' Connections - API to Services
+REST --> IAM
+REST --> PM
+REST --> BIM
+REST --> SCHED
+REST --> IOT
+REST --> NOTIF
+
+GQL --> IAM
+GQL --> PM
+GQL --> BIM
+
+WS --> VR_ENG
+WS --> NOTIF
+
+' Connections - Services to Data
+IAM --> PG
+IAM --> REDIS
+PM --> PG
+PM --> SLED
+BIM --> PG
+BIM --> S3
+VR_ENG --> REDIS
+VR_ENG --> S3
+SCHED --> SLED
+IOT --> SLED
+IOT --> TSDB
+ANALYTICS --> PG
+ANALYTICS --> TSDB
+ANALYTICS --> REDIS
+
+' Connections - Services to External
+IOT --> MQTT
+NOTIF --> EMAIL
+NOTIF --> PUSH
+BIM --> STORAGE
+
+note right of BIM
+  **BIM Engine Features:**
+  • IFC 2x3, 4, 4x3 support
+  • Geometry tessellation
+  • Material extraction
+  • Clash detection
+  • 4D-7D dimensions
+end note
+
+note right of IOT
+  **IoT Capabilities:**
+  • 20+ device types
+  • MQTT, LoRaWAN, HTTP
+  • Real-time monitoring
+  • Automation rules
+  • Predictive maintenance
+end note
+
+note bottom of VR_ENG
+  **VR Features:**
+  • Multi-user sessions
+  • Real-time collaboration
+  • 3D annotations
+  • Measurements
+  • Recording
+  • Teleportation
+end note
+
+@enduml
